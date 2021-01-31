@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notion Embeds</title>
+
+    <style>
+      body {
+        display: grid;
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        grid-template-columns: 2fr 1fr;
+        grid-template-rows: 1fr;
+
+        font-family: inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji",
+          "Segoe UI Symbol";
+      }
+
+      .content {
+        background: rgb(247, 246, 243);
+        padding: 50px;
+        overflow-y: auto;
+      }
+
+      .embed {
+        justify-self: stretch;
+        align-self: stretch;
+        margin: 50px;
+        background: #fff;
+        border: none;
+      }
+
+      h1 {
+        font-size: 48px;
+      }
+      h2 {
+        font-size: 32px;
+        margin: 8px 0;
+      }
+      .section {
+        display: flex;
+        margin-bottom: 32px;
+      }
+      .section > div {
+        flex-grow: 1;
+      }
+      .number {
+        font-size: 64px;
+        font-weight: bold;
+        margin-right: 24px;
+      }
+      p {
+        margin-top: 0;
+        font-size: 24px;
+        color: rgba(25, 23, 17, 0.6);
+      }
+
+      .urlbox {
+        font-size: inherit;
+        color: inherit;
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 4px;
+        border: none;
+        box-shadow: rgb(84 70 35 / 15%) 0px 2px 8px,
+          rgb(84 70 35 / 15%) 0px 1px 3px;
+      }
+
+      code {
+        background: rgba(0, 0, 0, 0.1);
+        padding: 2px 4px;
+        margin: -2px 0;
+        border-radius: 3px;
+      }
+
+      footer {
+        font-size: 14px;
+        color: rgb(114, 112, 107);
+      }
+      footer a {
+        color: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      <h1>Notion Embeds</h1>
+      <p>
+        <strong>Integrate your Google Calendar directly into Notion!</strong>
+        Notion Embeds are embeddable pages that blend perfectly into Notion.
+      </p>
+
+      <div class="section">
+        <span class="number">1</span>
+        <div>
+          <h2>Choose an embed</h2>
+          <p>
+            Right now the only option is a view of your Google Calendar events
+            for the day. (If you like this one, I'll add more!)
+          </p>
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="number">2</span>
+        <div>
+          <h2>Copy the embed URL</h2>
+          <p>
+            <input
+              class="urlbox"
+              value="http://localhost:3000/google-calendar/agenda/"
+              readonly
+            />
+          </p>
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="number">3</span>
+        <div>
+          <h2>Create the embed in Notion</h2>
+          <p>
+            Open your favorite notion page and use the
+            <code>/embed</code> command to create a new embed. Paste the URL and
+            voilà!
+          </p>
+        </div>
+      </div>
+
+      <footer>
+        Made with ❤️ and code by
+        <a href="https://joshuapullen.com/" target="_blank">Josh Pullen</a>.
+      </footer>
+    </div>
+    <iframe class="embed" src="/google-calendar/agenda/"></iframe>
+  </body>
+</html>

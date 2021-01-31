@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Google Calendar Agenda | Notion Embeds</title>
+    <meta charset="utf-8" />
+
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica,
+          "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji",
+          "Segoe UI Symbol";
+      }
+
+      .loginButton {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgb(225, 98, 89);
+        border: 1px solid rgb(190, 86, 67);
+        box-shadow: rgb(15 15 15 / 10%) 0px 1px 2px;
+        color: white;
+        padding: 8px 12px;
+        font-size: 14px;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: background 20ms ease-in 0s;
+      }
+      .loginButton:hover,
+      .loginButton:focus,
+      .loginButton:active {
+        background: rgb(207, 83, 74);
+      }
+
+      .agenda {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow-y: auto;
+        box-shadow: inset 0 0 0 1px rgb(223, 223, 222);
+      }
+      .agenda__header {
+        position: sticky;
+        top: 0;
+        box-shadow: inset 0 -1px 0 rgb(223, 223, 222);
+        padding: 8px;
+        background: white;
+        z-index: 10;
+      }
+      .agenda__info {
+        display: flex;
+        align-items: center;
+      }
+      .agenda__title {
+        color: rgb(55, 53, 47);
+        font-size: 14px;
+        font-weight: 600;
+        flex-grow: 1;
+      }
+      .agenda__logOut {
+        background: none;
+        border: none;
+        user-select: none;
+        transition: background 20ms ease-in;
+        cursor: pointer;
+        flex-shrink: 0;
+        white-space: nowrap;
+        border-radius: 3px;
+        font-size: 14px;
+        line-height: 1.2;
+        padding: 3px 6px;
+        color: rgba(55, 53, 47, 0.6);
+      }
+      .agenda__logOut:hover,
+      .agenda__logOut:active {
+        background: #efefef;
+      }
+      .agenda__fullDayEvents {
+        margin-top: 8px;
+      }
+      .agenda__event--fullDay:not(:last-of-type) {
+        margin-bottom: 4px;
+      }
+      .agenda__day {
+        box-shadow: inset 0 -1px 0 rgb(223, 223, 222);
+      }
+      .agenda__event {
+        display: flex;
+        box-sizing: border-box;
+        background: white;
+        box-shadow: rgb(15 15 15 / 10%) 0px 0px 0px 1px,
+          rgb(15 15 15 / 10%) 0px 2px 4px;
+        border-radius: 3px;
+        padding: 3px 4px;
+        text-decoration: none;
+
+        min-height: 21px; /* Don't make it too short, even if it's inaccurate */
+      }
+      .agenda__event:hover,
+      .agenda__event:active {
+        background: #efefef;
+      }
+      .event__title {
+        color: rgb(55, 53, 47);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 12px;
+        font-weight: 600;
+        flex-grow: 1;
+      }
+      .event__times {
+        color: rgba(55, 53, 47, 0.6);
+        font-size: 10px;
+      }
+      .agenda__currentTime {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        transform: translateY(-50%);
+        background: rgb(235, 87, 87);
+      }
+      .agenda__currentTime > span {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgb(235, 87, 87);
+        font-size: 10px;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 999px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script src="https://unpkg.com/htm@3.0.4/preact/standalone.umd.js"></script>
+    <script type="text/javascript">
+      const { html, render, useState, useEffect } = htmPreact;
+
+      const CLIENT_ID =
+        "378422767188-0eopoblnb1c483emtvhjmn09eq9iabqq.apps.googleusercontent.com";
+
+      const DISCOVERY_DOCS = [
+        "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
+      ];
+
+      const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+
+      function init() {
+        gapi.load("client:auth2", async function () {
+          await gapi.client.init({
+            // apiKey: API_KEY,
+            clientId: CLIENT_ID,
+            discoveryDocs: DISCOVERY_DOCS,
+            scope: SCOPES,
+            fetch_basic_profile: false,
+          });
+
+          const auth2 = gapi.auth2.getAuthInstance();
+
+          render(
+            html`<${App} auth=${auth2} />`,
+            document.querySelector("#app")
+          );
+        });
+      }
+
+      function App({ auth }) {
+        const [loggedIn, { logIn, logOut }] = useLoggedIn(auth);
+
+        const currentDate = useCurrentDate();
+
+        if (!loggedIn) {
+          return html`
+            <button
+              class="loginButton"
+              onClick=${() => {
+                logIn();
+              }}
+            >
+              Sign in with Google
+            </button>
+          `;
+        }
+
+        return html`<${Agenda} date=${currentDate} logOut=${logOut} />`;
+      }
+
+      function Agenda({ date, logOut }) {
+        const timeMin = new Date(date);
+        timeMin.setHours(0, 0, 0, 0);
+
+        const timeMax = new Date(date);
+        timeMax.setDate(timeMax.getDate() + 1);
+        timeMax.setHours(0, 0, 0, 0);
+
+        const events = useEvents(timeMin.toISOString(), timeMax.toISOString());
+
+        const dayHeight = 50;
+
+        const formatTime = (date) => {
+          return date.toLocaleTimeString("en-US", { timeStyle: "short" });
+        };
+
+        const currentDate = useCurrentDate();
+
+        return html`
+          <div class="agenda">
+            <div class="agenda__header">
+              <div class="agenda__info">
+                <div class="agenda__title">Today</div>
+                <button
+                  class="agenda__logOut"
+                  onClick=${() => {
+                    logOut();
+                  }}
+                >
+                  Log out
+                </button>
+              </div>
+              ${events.some((event) => !!event.start.date) &&
+              html`
+                <div class="agenda__fullDayEvents">
+                  ${events
+                    .filter((event) => !!event.start.date)
+                    .map((event) => {
+                      // All-day event
+                      return html`
+                        <a
+                          href=${event.htmlLink}
+                          target="__blank"
+                          class="agenda__event agenda__event--fullDay"
+                        >
+                          <div class="event__title">${event.summary}</div>
+                        </a>
+                      `;
+                    })}
+                </div>
+              `}
+            </div>
+            <div style=${{ position: "relative" }}>
+              ${events
+                .filter((event) => !event.start.date)
+                .map((event) => {
+                  const eventStart = new Date(event.start.dateTime);
+                  const eventEnd = new Date(event.end.dateTime);
+
+                  const offsetHours = (eventStart - timeMin) / (1000 * 60 * 60);
+                  const durationHours =
+                    (eventEnd - eventStart) / (1000 * 60 * 60);
+
+                  return html`
+                    <a
+                      href=${event.htmlLink}
+                      target="__blank"
+                      class="agenda__event"
+                      style=${{
+                        position: "absolute",
+                        top: dayHeight * offsetHours,
+                        left: 8,
+                        right: 8,
+                        height: dayHeight * durationHours,
+                      }}
+                    >
+                      <div class="event__title">${event.summary}</div>
+                      <div class="event__times">
+                        ${formatTime(eventStart)} - ${formatTime(eventEnd)}
+                      </div>
+                    </a>
+                  `;
+                })}
+              ${currentDate > timeMin &&
+              currentDate < timeMax &&
+              html`
+                <div
+                  class="agenda__currentTime"
+                  style=${{
+                    top:
+                      dayHeight * ((currentDate - timeMin) / (1000 * 60 * 60)),
+                  }}
+                >
+                  <span>${formatTime(currentDate)}</span>
+                </div>
+              `}
+
+              <div>
+                ${new Array(24)
+                  .fill()
+                  .map(
+                    () =>
+                      html`<div
+                        class="agenda__day"
+                        style=${{ height: dayHeight }}
+                      />`
+                  )}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function useLoggedIn(auth) {
+        const [loggedIn, setLoggedIn] = useState(() => auth.isSignedIn.get());
+
+        useEffect(() => {
+          auth.isSignedIn.listen(setLoggedIn);
+        }, []);
+
+        return [
+          loggedIn,
+          {
+            logIn: auth.signIn,
+            logOut: auth.signOut,
+          },
+        ];
+      }
+
+      function useEvents(timeMin, timeMax) {
+        const [events, setEvents] = useState([]);
+
+        useEffect(() => {
+          gapi.client.calendar.events
+            .list({
+              calendarId: "primary",
+              timeMin,
+              timeMax,
+              showDeleted: false,
+              singleEvents: true,
+              orderBy: "startTime",
+            })
+            .then((response) => {
+              setEvents(response.result.items);
+            });
+        }, [timeMin, timeMax]);
+
+        return events;
+      }
+
+      function useCurrentDate(updateRate = 1000) {
+        const [date, setDate] = useState(new Date());
+
+        const updateDate = () => {
+          setDate(new Date());
+        };
+
+        useEffect(() => {
+          const interval = setInterval(updateDate, updateRate);
+          return () => {
+            clearInterval(interval);
+          };
+        }, [updateRate]);
+
+        return date;
+      }
+    </script>
+
+    <script
+      src="https://apis.google.com/js/api.js?onload=init"
+      async
+      defer
+    ></script>
+  </body>
+</html>
